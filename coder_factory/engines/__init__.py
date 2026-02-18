@@ -1,10 +1,11 @@
 """Engines module initialization"""
-# F001 - 需求解析引擎
-# F002 - 交互确认系统
-# F003 - 架构设计引擎
-# F004 - 代码生成核心
-# F005 - 自动化测试系统
-# F006 - 容器化部署引擎
-# F007 - 交付流水线
 
-__all__ = []
+from .claude_client import ClaudeCodeClient, ClaudeCodeResult
+from .requirement_parser import RequirementParser, ParseResult
+
+__all__ = [
+    "ClaudeCodeClient",
+    "ClaudeCodeResult",
+    "RequirementParser",
+    "ParseResult",
+]
