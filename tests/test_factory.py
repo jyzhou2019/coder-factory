@@ -10,6 +10,14 @@ from coder_factory.models.requirement import (
 )
 from coder_factory.models.project_spec import TechStack, Runtime
 from coder_factory.engines.requirement_parser import RequirementParser, ParseResult
+from coder_factory.engines.interaction_manager import (
+    InteractionManager,
+    DialogState,
+    QuestionType,
+    Question,
+    DialogStateMachine,
+)
+from coder_factory.engines.confirmation_flow import ConfirmationFlow
 
 
 def test_version():
@@ -161,3 +169,152 @@ def test_complexity_estimation():
         "subtasks": ["子1", "子2", "子3", "子4", "子5", "子6"]
     })
     assert complex_task >= 3
+
+
+# ===== F002 交互确认系统测试 =====
+
+def test_dialog_state_machine():
+    """测试对话状态机"""
+    sm = DialogStateMachine()
+
+    assert sm.state == DialogState.IDLE
+
+    # 测试有效转换
+    assert sm.can_transition_to(DialogState.PARSING)
+    assert sm.transition(DialogState.PARSING)
+    assert sm.state == DialogState.PARSING
+
+    # 测试无效转换
+    assert not sm.can_transition_to(DialogState.IDLE)
+
+    # 测试历史记录
+    history = sm.get_history()
+    assert len(history) == 2
+
+
+def test_dialog_state_machine_reset():
+    """测试状态机重置"""
+    sm = DialogStateMachine()
+    sm.transition(DialogState.PARSING)
+    sm.transition(DialogState.CONFIRMING)
+
+    sm.reset()
+
+    assert sm.state == DialogState.IDLE
+    assert len(sm.get_history()) == 1
+
+
+def test_question():
+    """测试问题对象"""
+    q = Question(
+        question="是否确认?",
+        type=QuestionType.CONFIRM,
+        default=True,
+    )
+
+    assert q.question == "是否确认?"
+    assert q.type == QuestionType.CONFIRM
+    assert q.answered is False
+
+    # 测试序列化
+    data = q.to_dict()
+    assert data["type"] == "confirm"
+
+
+def test_interaction_manager():
+    """测试交互管理器"""
+    manager = InteractionManager()
+
+    assert manager.state == DialogState.IDLE
+
+    # 启动对话
+    initial_data = {"summary": "测试需求"}
+    manager.start_dialog(initial_data)
+
+    # 添加问题
+    q = manager.add_question("项目类型正确吗?", QuestionType.CONFIRM)
+    assert len(manager.get_unanswered_questions()) == 1
+
+    # 回答问题
+    manager.answer_question(q.id, True)
+    assert len(manager.get_unanswered_questions()) == 0
+
+
+def test_interaction_manager_changes():
+    """测试需求变更追踪"""
+    manager = InteractionManager()
+    manager.start_dialog({"feature": "original"})
+
+    # 记录变更
+    manager.update_requirement("feature", "modified", "用户修改")
+    changes = manager.get_change_history()
+
+    assert len(changes) == 1
+    assert changes[0]["old_value"] == "original"
+    assert changes[0]["new_value"] == "modified"
+
+
+def test_interaction_manager_approve():
+    """测试批准流程"""
+    manager = InteractionManager()
+    manager.start_dialog({"summary": "test"})
+
+    # 添加非必须问题
+    manager.add_question("可选问题", QuestionType.TEXT, required=False)
+
+    # 直接批准
+    assert manager.approve()
+    assert manager.is_approved
+
+
+def test_interaction_manager_cancel():
+    """测试取消流程"""
+    manager = InteractionManager()
+    manager.start_dialog({"summary": "test"})
+    manager.transition_state(DialogState.CONFIRMING)
+
+    manager.cancel("测试取消")
+
+    assert manager.is_cancelled
+
+
+def test_confirmation_flow_init():
+    """测试确认流程初始化"""
+    flow = ConfirmationFlow()
+
+    assert flow.manager is not None
+    assert flow.parser is not None
+
+
+def test_interaction_manager_dialog_turns():
+    """测试对话轮次"""
+    manager = InteractionManager()
+    manager.start_dialog({})
+
+    # 添加对话轮次
+    turn = manager.add_turn(
+        user_input="我想修改需求",
+        system_response="好的，请告诉我您想修改什么"
+    )
+
+    assert turn.turn_id == 1
+    assert turn.user_input == "我想修改需求"
+
+    history = manager.get_dialog_history()
+    assert len(history) == 1
+
+
+def test_interaction_manager_nested_update():
+    """测试嵌套字段更新"""
+    manager = InteractionManager()
+    manager.start_dialog({
+        "tech_stack": {
+            "runtime": "python"
+        }
+    })
+
+    manager.update_requirement("tech_stack.runtime", "nodejs", "用户选择")
+
+    req = manager.get_requirement()
+    assert req["tech_stack"]["runtime"] == "nodejs"
+
