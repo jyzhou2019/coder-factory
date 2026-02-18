@@ -507,3 +507,168 @@ def test_generate_architecture_document():
     assert "FastAPI" in doc
     assert "Use caching" in doc
 
+
+# ===== F006 容器化部署引擎测试 =====
+
+def test_docker_config():
+    """测试 Docker 配置"""
+    from coder_factory.engines.deployment_engine import DockerConfig
+
+    config = DockerConfig(
+        base_image="python:3.11-slim",
+        workdir="/app",
+        expose_ports=[8000],
+        commands={
+            "install": "pip install -r requirements.txt",
+            "run": "uvicorn main:app --host 0.0.0.0",
+        },
+    )
+
+    assert config.base_image == "python:3.11-slim"
+    assert 8000 in config.expose_ports
+    assert config.commands["install"] == "pip install -r requirements.txt"
+
+
+def test_compose_service():
+    """测试 Compose 服务"""
+    from coder_factory.engines.deployment_engine import ComposeService
+
+    service = ComposeService(
+        name="api",
+        build_context=".",
+        ports=["8000:8000"],
+        environment={"DEBUG": "true"},
+    )
+
+    assert service.name == "api"
+    assert "8000:8000" in service.ports
+
+    # 测试序列化
+    data = service.to_dict()
+    assert data["ports"] == ["8000:8000"]
+    assert data["environment"] == {"DEBUG": "true"}
+
+
+def test_dockerfile_generator():
+    """测试 Dockerfile 生成器"""
+    from coder_factory.engines.deployment_engine import DockerfileGenerator
+
+    gen = DockerfileGenerator()
+
+    # 测试 Python FastAPI
+    dockerfile = gen.generate({
+        "runtime": "python",
+        "backend": "fastapi",
+    }, "test_api")
+
+    assert "FROM python" in dockerfile
+    assert "uvicorn" in dockerfile
+
+    # 测试 Node.js Express
+    dockerfile = gen.generate({
+        "runtime": "nodejs",
+        "backend": "express",
+    }, "test_api")
+
+    assert "FROM node" in dockerfile
+    assert "npm" in dockerfile
+
+
+def test_docker_compose_generator():
+    """测试 Docker Compose 生成器"""
+    from coder_factory.engines.deployment_engine import DockerComposeGenerator
+
+    gen = DockerComposeGenerator()
+
+    compose = gen.generate(
+        "test_project",
+        {
+            "runtime": "python",
+            "backend": "fastapi",
+            "database": "postgresql",
+        },
+        include_database=True,
+    )
+
+    assert "services:" in compose
+    assert "test_project:" in compose.lower() or "backend:" in compose.lower()
+
+
+def test_deployment_engine_init():
+    """测试部署引擎初始化"""
+    from coder_factory.engines.deployment_engine import DeploymentEngine
+
+    engine = DeploymentEngine(workspace="./test_workspace")
+    assert engine.dockerfile_gen is not None
+    assert engine.compose_gen is not None
+
+
+def test_deployment_engine_generate():
+    """测试部署文件生成"""
+    from coder_factory.engines.deployment_engine import DeploymentEngine
+
+    engine = DeploymentEngine()
+
+    # 测试 Dockerfile 生成
+    dockerfile = engine.generate_dockerfile(
+        {"runtime": "python", "backend": "fastapi"},
+        "my_api"
+    )
+    assert "FROM" in dockerfile
+
+    # 测试 docker-compose 生成
+    compose = engine.generate_compose(
+        "my_api",
+        {"runtime": "python", "backend": "fastapi", "database": "postgresql"}
+    )
+    assert "services:" in compose
+
+
+def test_deployment_engine_extras():
+    """测试部署引擎额外文件生成"""
+    from coder_factory.engines.deployment_engine import DeploymentEngine
+
+    engine = DeploymentEngine()
+
+    # 测试 .dockerignore
+    dockerignore = engine.generate_dockerignore({"runtime": "python"})
+    assert ".git" in dockerignore
+    assert "__pycache__" in dockerignore
+
+    # 测试 .env.example
+    env_example = engine.generate_env_example({"database": "postgresql"})
+    assert "DATABASE_URL" in env_example
+
+    # 测试部署脚本
+    deploy_script = engine.generate_deploy_script("my_app")
+    assert "docker build" in deploy_script
+    assert "docker-compose" in deploy_script
+
+
+def test_deployment_summary():
+    """测试部署摘要"""
+    from coder_factory.engines.deployment_engine import DeploymentEngine
+
+    engine = DeploymentEngine()
+    summary = engine.get_deployment_summary("my_app", {"runtime": "python"})
+
+    assert summary["project_name"] == "my_app"
+    assert "Dockerfile" in summary["files"]
+    assert "build" in summary["commands"]
+    assert "run" in summary["commands"]
+
+
+def test_docker_templates():
+    """测试 Docker 模板"""
+    from coder_factory.engines.deployment_engine import DOCKER_TEMPLATES
+
+    # 检查模板存在
+    assert "python-fastapi" in DOCKER_TEMPLATES
+    assert "nodejs-express" in DOCKER_TEMPLATES
+    assert "go-gin" in DOCKER_TEMPLATES
+
+    # 检查模板内容
+    fastapi_template = DOCKER_TEMPLATES["python-fastapi"]
+    assert "python" in fastapi_template.base_image
+    assert 8000 in fastapi_template.expose_ports
+

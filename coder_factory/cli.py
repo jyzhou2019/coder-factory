@@ -18,6 +18,7 @@ from .engines.confirmation_flow import ConfirmationFlow
 from .engines.interaction_manager import QuestionType
 from .engines.architecture_designer import ArchitectureDesigner
 from .engines.tech_stack_kb import TechStackKnowledgeBase, ProjectCategory
+from .engines.deployment_engine import DeploymentEngine
 
 
 console = Console()
@@ -458,7 +459,118 @@ def tech(tech_names):
                 console.print("[red]未找到任何匹配的技术[/]")
 
 
-def _show_status():
+@cli.command()
+@click.argument('project_path', default='.')
+@click.option('--runtime', '-r', default='python', help='运行时 (python/nodejs/go)')
+@click.option('--backend', '-b', default=None, help='后端框架')
+@click.option('--frontend', '-f', default=None, help='前端框架')
+@click.option('--database', '-d', default=None, help='数据库')
+@click.option('--output', '-o', default=None, help='输出目录')
+@click.option('--prod', is_flag=True, help='生成生产环境配置')
+def deploy(project_path, runtime, backend, frontend, database, output, prod):
+    """生成 Docker 部署配置
+
+    示例:
+      coder-factory deploy                              # 使用默认配置
+      coder-factory deploy . -r python -b fastapi       # Python FastAPI
+      coder-factory deploy . -r nodejs -b express       # Node.js Express
+      coder-factory deploy . -r python -d postgresql    # 带数据库
+      coder-factory deploy . --prod                     # 生产环境
+    """
+    console.print("[cyan]生成 Docker 部署配置...[/]")
+
+    # 构建技术栈
+    tech_stack = {
+        "runtime": runtime,
+        "backend": backend,
+        "frontend": frontend,
+        "database": database,
+    }
+
+    # 确定输出目录
+    output_dir = Path(output) if output else Path(project_path)
+
+    # 生成部署配置
+    engine = DeploymentEngine(output_dir)
+    project_name = output_dir.name or "app"
+
+    # 生成文件
+    files = engine.write_deployment_files(project_name, tech_stack, output_dir)
+
+    # 显示结果
+    console.print(f"\n[green]✓ 已生成以下文件:[/]")
+    for name, path in files.items():
+        console.print(f"  [dim]•[/] {path.name}")
+
+    # 显示使用说明
+    summary = engine.get_deployment_summary(project_name, tech_stack)
+    console.print(f"\n[bold cyan]使用方法:[/]")
+    for cmd_name, cmd in summary["commands"].items():
+        console.print(f"  [dim]{cmd_name}:[/] {cmd}")
+
+    if prod:
+        console.print(f"\n[yellow]注意: 生产环境配置已启用，请确保:[/]")
+        console.print("  • 修改 .env.example 为 .env 并填写真实值")
+        console.print("  • 检查 Dockerfile 中的安全配置")
+        console.print("  • 配置适当的健康检查")
+
+
+@cli.command()
+@click.argument('project_path', default='.')
+@click.option('--build', is_flag=True, help='构建镜像')
+@click.option('--up', is_flag=True, help='启动服务')
+@click.option('--down', is_flag=True, help='停止服务')
+@click.option('--logs', is_flag=True, help='查看日志')
+def docker(project_path, build, up, down, logs):
+    """Docker 操作命令
+
+    示例:
+      coder-factory docker --build    # 构建镜像
+      coder-factory docker --up       # 启动服务
+      coder-factory docker --down     # 停止服务
+      coder-factory docker --logs     # 查看日志
+    """
+    import subprocess
+
+    project_dir = Path(project_path)
+
+    if build:
+        console.print("[cyan]构建 Docker 镜像...[/]")
+        result = subprocess.run(
+            ["docker", "build", "-t", f"{project_dir.name}:latest", "."],
+            cwd=project_dir,
+        )
+        if result.returncode == 0:
+            console.print("[green]✓ 构建完成[/]")
+        else:
+            console.print("[red]✗ 构建失败[/]")
+
+    elif up:
+        console.print("[cyan]启动服务...[/]")
+        result = subprocess.run(
+            ["docker-compose", "up", "-d"],
+            cwd=project_dir,
+        )
+        if result.returncode == 0:
+            console.print("[green]✓ 服务已启动[/]")
+            console.print("[dim]查看状态: docker-compose ps[/]")
+
+    elif down:
+        console.print("[cyan]停止服务...[/]")
+        result = subprocess.run(
+            ["docker-compose", "down"],
+            cwd=project_dir,
+        )
+        console.print("[green]✓ 服务已停止[/]")
+
+    elif logs:
+        subprocess.run(
+            ["docker-compose", "logs", "-f"],
+            cwd=project_dir,
+        )
+
+    else:
+        console.print("[yellow]请指定操作: --build, --up, --down, --logs[/]")
     """显示模块状态"""
     table = Table(title="Coder-Factory 模块状态")
     table.add_column("模块", style="cyan")
@@ -471,7 +583,7 @@ def _show_status():
         ("F003 架构设计引擎", "✓ 已实现", "技术栈知识库 + 架构生成"),
         ("F004 代码生成核心", "✓ 已实现", "使用 Claude Code 生成"),
         ("F005 自动化测试系统", "✓ 已实现", "使用 Claude Code 测试"),
-        ("F006 容器化部署引擎", "待开发", "Docker 部署"),
+        ("F006 容器化部署引擎", "✓ 已实现", "Dockerfile + Compose 自动生成"),
         ("F007 交付流水线", "待开发", "完整交付链"),
     ]
 

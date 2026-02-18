@@ -96,6 +96,54 @@
 1. ~~实现 F001 - 需求解析引擎~~ ✅ 已完成
 2. ~~实现 F002 - 交互确认系统~~ ✅ 已完成
 3. ~~实现 F003 - 架构设计引擎~~ ✅ 已完成
+4. ~~实现 F006 - 容器化部署引擎~~ ✅ 已完成
+
+---
+
+### [2026-02-18] F006 容器化部署引擎完成
+
+#### 核心组件
+1. **deployment_engine.py** - 部署引擎
+   - `DeploymentEngine` - 主部署引擎
+   - `DockerfileGenerator` - Dockerfile 生成器
+   - `DockerComposeGenerator` - Compose 生成器
+   - `DockerConfig` / `ComposeService` - 配置数据模型
+
+#### Docker 配置模板
+- **Python**: FastAPI, Django, CLI
+- **Node.js**: Express, NestJS, React
+- **Go**: Gin, CLI
+- **Rust**: Actix
+
+#### 自动生成的文件
+- `Dockerfile` - 开发/生产双模式
+- `docker-compose.yml` - 包含数据库服务
+- `.dockerignore` - 忽略文件配置
+- `.env.example` - 环境变量模板
+- `deploy.sh` - 一键部署脚本
+
+#### CLI 新命令
+- `coder-factory deploy` - 生成部署配置
+  - `-r/--runtime` - 指定运行时
+  - `-b/--backend` - 指定后端框架
+  - `-d/--database` - 指定数据库
+  - `--prod` - 生产环境配置
+- `coder-factory docker` - Docker 操作
+  - `--build` - 构建镜像
+  - `--up` - 启动服务
+  - `--down` - 停止服务
+  - `--logs` - 查看日志
+
+#### 功能模块更新
+| ID | 模块 | 状态 |
+|----|------|------|
+| F001 | 需求解析引擎 | ✅ passed |
+| F002 | 交互确认系统 | ✅ passed |
+| F003 | 架构设计引擎 | ✅ passed |
+| F004 | 代码生成核心 | ✅ (Claude Code) |
+| F005 | 自动化测试系统 | ✅ (Claude Code) |
+| F006 | 容器化部署引擎 | ✅ passed |
+| F007 | 交付流水线 | pending |
 
 ---
 

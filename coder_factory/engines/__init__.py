@@ -26,6 +26,14 @@ from .architecture_designer import (
     ArchitectureDesign,
     ArchitectureComponent,
 )
+from .deployment_engine import (
+    DeploymentEngine,
+    DockerfileGenerator,
+    DockerComposeGenerator,
+    DockerConfig,
+    ComposeService,
+    DOCKER_TEMPLATES,
+)
 
 __all__ = [
     # Claude Client
@@ -56,4 +64,11 @@ __all__ = [
     "ArchitectureDesigner",
     "ArchitectureDesign",
     "ArchitectureComponent",
+    # Deployment Engine
+    "DeploymentEngine",
+    "DockerfileGenerator",
+    "DockerComposeGenerator",
+    "DockerConfig",
+    "ComposeService",
+    "DOCKER_TEMPLATES",
 ]
