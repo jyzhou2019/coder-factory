@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  coder-factory:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: coder-factory
+    volumes:
+      # Mount workspace for generated projects
+      - ./workspace:/workspace
+      # Mount Docker socket for container operations
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Mount config directory
+      - ./config:/app/config
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - WORKSPACE_PATH=/workspace
+    stdin_open: true
+    tty: true
+    command: ["--interactive"]
+
+  # Optional: Redis for state persistence
+  redis:
+    image: redis:7-alpine
+    container_name: coder-factory-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    profiles:
+      - full
+
+volumes:
+  redis_data:

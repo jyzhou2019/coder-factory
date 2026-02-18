@@ -1,0 +1,90 @@
+{
+  "project": "coder-factory",
+  "version": "0.1.0",
+  "description": "AI自主代码工厂 - 从需求到交付的全自动化生产线",
+  "features": [
+    {
+      "id": "F001",
+      "desc": "需求解析引擎 - 将用户自然语言需求分解为可执行任务",
+      "steps": [
+        "实现自然语言解析器",
+        "构建任务分解树结构",
+        "生成需求确认对话流"
+      ],
+      "status": "pending",
+      "priority": "P0"
+    },
+    {
+      "id": "F002",
+      "desc": "交互确认系统 - 与用户进行需求澄清和确认",
+      "steps": [
+        "设计对话状态机",
+        "实现多轮对话管理",
+        "构建需求变更追踪"
+      ],
+      "status": "pending",
+      "priority": "P0"
+    },
+    {
+      "id": "F003",
+      "desc": "架构设计引擎 - 根据需求自动匹配技术栈并设计系统架构",
+      "steps": [
+        "构建技术栈知识库",
+        "实现技术匹配算法",
+        "生成架构设计文档"
+      ],
+      "status": "pending",
+      "priority": "P0"
+    },
+    {
+      "id": "F004",
+      "desc": "代码生成核心 - 自主编码实现功能模块",
+      "steps": [
+        "集成AI代码生成能力",
+        "实现多语言代码模板",
+        "构建代码质量检测"
+      ],
+      "status": "pending",
+      "priority": "P0"
+    },
+    {
+      "id": "F005",
+      "desc": "自动化测试系统 - 生成并执行测试用例",
+      "steps": [
+        "实现测试用例生成",
+        "集成单元/集成/E2E测试",
+        "构建测试报告系统"
+      ],
+      "status": "pending",
+      "priority": "P1"
+    },
+    {
+      "id": "F006",
+      "desc": "容器化部署引擎 - Docker化交付与部署",
+      "steps": [
+        "自动生成Dockerfile",
+        "生成docker-compose配置",
+        "实现一键部署脚本"
+      ],
+      "status": "pending",
+      "priority": "P1"
+    },
+    {
+      "id": "F007",
+      "desc": "交付流水线 - 从代码到产品的完整交付链",
+      "steps": [
+        "构建交付检查清单",
+        "生成用户文档",
+        "实现版本发布管理"
+      ],
+      "status": "pending",
+      "priority": "P1"
+    }
+  ],
+  "tech_stack": {
+    "runtime": "TBD - 根据目标需求动态选择",
+    "ai_engine": "Claude API / OpenAI API",
+    "container": "Docker + Docker Compose",
+    "vcs": "Git + GitHub"
+  }
+}
