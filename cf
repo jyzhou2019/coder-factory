@@ -1,0 +1,7 @@
+#!/bin/bash
+# Coder-Factory 便捷命令
+# 用法: ./cf <命令> [参数]
+
+# 将参数传递给容器内的命令
+ARGS="$@"
+docker exec coder-factory bash -c "export PYTHONPATH=/app && python -m coder_factory.cli $ARGS"

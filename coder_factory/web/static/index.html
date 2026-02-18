@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coder-Factory - AI代码生成工厂</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#6366f1',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .slide-in { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .progress-bar {
+            transition: width 0.5s ease-in-out;
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+    <div id="app" class="flex h-screen">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
+            <div class="p-4 border-b border-gray-700">
+                <h1 class="text-xl font-bold text-blue-400">Coder-Factory</h1>
+                <p class="text-xs text-gray-500 mt-1">AI代码生成工厂</p>
+            </div>
+
+            <nav class="flex-1 p-4 space-y-2">
+                <a href="#" @click="currentPage = 'dashboard'"
+                   :class="currentPage === 'dashboard' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'"
+                   class="block px-4 py-2 rounded-lg transition-colors">
+                    <span class="flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                        </svg>
+                        仪表盘
+                    </span>
+                </a>
+
+                <a href="#" @click="currentPage = 'requirement'"
+                   :class="currentPage === 'requirement' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'"
+                   class="block px-4 py-2 rounded-lg transition-colors">
+                    <span class="flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                        需求输入
+                    </span>
+                </a>
+
+                <a href="#" @click="currentPage = 'dialog'"
+                   :class="currentPage === 'dialog' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'"
+                   class="block px-4 py-2 rounded-lg transition-colors">
+                    <span class="flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                        </svg>
+                        对话确认
+                    </span>
+                </a>
+
+                <a href="#" @click="currentPage = 'architecture'"
+                   :class="currentPage === 'architecture' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'"
+                   class="block px-4 py-2 rounded-lg transition-colors">
+                    <span class="flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                        架构设计
+                    </span>
+                </a>
+
+                <a href="#" @click="currentPage = 'tasks'"
+                   :class="currentPage === 'tasks' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'"
+                   class="block px-4 py-2 rounded-lg transition-colors">
+                    <span class="flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                        </svg>
+                        任务管理
+                    </span>
+                </a>
+
+                <a href="#" @click="currentPage = 'delivery'"
+                   :class="currentPage === 'delivery' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-700'"
+                   class="block px-4 py-2 rounded-lg transition-colors">
+                    <span class="flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+                        </svg>
+                        交付中心
+                    </span>
+                </a>
+            </nav>
+
+            <div class="p-4 border-t border-gray-700">
+                <div class="flex items-center text-sm text-gray-400">
+                    <div :class="wsConnected ? 'bg-green-500' : 'bg-red-500'" class="w-2 h-2 rounded-full mr-2"></div>
+                    {{ wsConnected ? '已连接' : '未连接' }}
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-auto">
+            <!-- Dashboard Page -->
+            <div x-show="currentPage === 'dashboard'" x-cloak class="p-6 fade-in">
+                <h2 class="text-2xl font-bold mb-6">仪表盘</h2>
+
+                <!-- Status Cards -->
+                <div class="grid grid-cols-4 gap-4 mb-6">
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <div class="text-gray-400 text-sm">活跃会话</div>
+                        <div class="text-3xl font-bold text-blue-400 mt-2">{{ stats.activeSessions }}</div>
+                    </div>
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <div class="text-gray-400 text-sm">运行中任务</div>
+                        <div class="text-3xl font-bold text-yellow-400 mt-2">{{ stats.runningTasks }}</div>
+                    </div>
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <div class="text-gray-400 text-sm">已完成任务</div>
+                        <div class="text-3xl font-bold text-green-400 mt-2">{{ stats.completedTasks }}</div>
+                    </div>
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <div class="text-gray-400 text-sm">已交付项目</div>
+                        <div class="text-3xl font-bold text-purple-400 mt-2">{{ stats.deliveredProjects }}</div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-gray-800 rounded-lg p-6 mb-6">
+                    <h3 class="text-lg font-semibold mb-4">快速操作</h3>
+                    <div class="flex gap-4">
+                        <button @click="currentPage = 'requirement'"
+                                class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors">
+                            + 新建需求
+                        </button>
+                        <button @click="currentPage = 'tasks'"
+                                class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg transition-colors">
+                            查看任务
+                        </button>
+                        <button @click="loadStats"
+                                class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg transition-colors">
+                            刷新状态
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Running Tasks -->
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold mb-4">运行中任务</h3>
+                    <div x-show="runningTasks.length === 0" class="text-gray-500 text-center py-8">
+                        暂无运行中的任务
+                    </div>
+                    <div class="space-y-3">
+                        <template x-for="task in runningTasks" :key="task.id">
+                            <div class="bg-gray-700 rounded-lg p-4">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-medium" x-text="task.title"></span>
+                                    <span class="text-sm text-blue-400" x-text="task.progress + '%'"></span>
+                                </div>
+                                <div class="w-full bg-gray-600 rounded-full h-2">
+                                    <div class="bg-blue-500 h-2 rounded-full progress-bar"
+                                         :style="'width: ' + task.progress + '%'"></div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Requirement Input Page -->
+            <div x-show="currentPage === 'requirement'" x-cloak class="p-6 fade-in">
+                <h2 class="text-2xl font-bold mb-6">需求输入</h2>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <!-- Input -->
+                    <div class="bg-gray-800 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4">描述您的需求</h3>
+                        <textarea x-model="requirementText"
+                                  placeholder="请输入您的项目需求，例如：&#10;&#10;我需要一个简单的待办事项API，包含：&#10;- 用户认证&#10;- 创建、读取、更新、删除待办事项&#10;- 任务分类和标签"
+                                  class="w-full h-64 bg-gray-700 border border-gray-600 rounded-lg p-4 text-gray-100 focus:outline-none focus:border-blue-500 resize-none"></textarea>
+                        <button @click="submitRequirement"
+                                :disabled="!requirementText.trim() || submitting"
+                                class="mt-4 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed px-4 py-3 rounded-lg transition-colors font-medium">
+                            <span x-show="!submitting">解析需求</span>
+                            <span x-show="submitting" class="flex items-center justify-center">
+                                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                解析中...
+                            </span>
+                        </button>
+                    </div>
+
+                    <!-- Preview -->
+                    <div class="bg-gray-800 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4">解析结果</h3>
+                        <div x-show="!parsedResult" class="text-gray-500 text-center py-16">
+                            输入需求后将在此显示解析结果
+                        </div>
+                        <div x-show="parsedResult" class="space-y-4">
+                            <div>
+                                <label class="text-gray-400 text-sm">需求摘要</label>
+                                <p class="text-lg" x-text="parsedResult?.summary"></p>
+                            </div>
+                            <div>
+                                <label class="text-gray-400 text-sm">项目类型</label>
+                                <p class="text-blue-400" x-text="parsedResult?.project_type"></p>
+                            </div>
+                            <div>
+                                <label class="text-gray-400 text-sm">核心功能</label>
+                                <ul class="mt-2 space-y-1">
+                                    <template x-for="feature in parsedResult?.features" :key="feature">
+                                        <li class="flex items-center text-gray-300">
+                                            <svg class="w-4 h-4 mr-2 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                            </svg>
+                                            <span x-text="feature"></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                            <div x-show="parsedResult?.session_id">
+                                <button @click="startDialog"
+                                        class="w-full bg-green-600 hover:bg-green-700 px-4 py-3 rounded-lg transition-colors font-medium">
+                                    开始交互确认
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dialog Page -->
+            <div x-show="currentPage === 'dialog'" x-cloak class="p-6 fade-in">
+                <h2 class="text-2xl font-bold mb-6">对话确认</h2>
+
+                <!-- Progress -->
+                <div class="bg-gray-800 rounded-lg p-4 mb-6">
+                    <div class="flex justify-between text-sm text-gray-400 mb-2">
+                        <span>确认进度</span>
+                        <span x-text="dialogProgress + '%'"></span>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-2">
+                        <div class="bg-green-500 h-2 rounded-full progress-bar"
+                             :style="'width: ' + dialogProgress + '%'"></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <!-- Dialog History -->
+                    <div class="bg-gray-800 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4">对话历史</h3>
+                        <div class="space-y-4 max-h-96 overflow-y-auto">
+                            <template x-for="turn in dialogHistory" :key="turn.turn_id">
+                                <div class="slide-in">
+                                    <div class="bg-gray-700 rounded-lg p-3 mb-2">
+                                        <div class="text-xs text-gray-500 mb-1">用户</div>
+                                        <div x-text="turn.user_input"></div>
+                                    </div>
+                                    <div class="bg-blue-900/30 rounded-lg p-3">
+                                        <div class="text-xs text-blue-400 mb-1">系统</div>
+                                        <div x-text="turn.system_response"></div>
+                                    </div>
+                                </div>
+                            </template>
+                            <div x-show="dialogHistory.length === 0" class="text-gray-500 text-center py-8">
+                                暂无对话记录
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Current Question -->
+                    <div class="bg-gray-800 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4">当前问题</h3>
+                        <div x-show="!currentQuestion" class="text-gray-500 text-center py-16">
+                            没有待回答的问题
+                        </div>
+                        <div x-show="currentQuestion" class="space-y-4">
+                            <div class="text-lg" x-text="currentQuestion?.question"></div>
+
+                            <!-- Confirm Type -->
+                            <div x-show="currentQuestion?.type === 'confirm'" class="flex gap-4">
+                                <button @click="answerQuestion(true)"
+                                        class="flex-1 bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors">
+                                    是
+                                </button>
+                                <button @click="answerQuestion(false)"
+                                        class="flex-1 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors">
+                                    否
+                                </button>
+                            </div>
+
+                            <!-- Choice Type -->
+                            <div x-show="currentQuestion?.type === 'choice'" class="space-y-2">
+                                <template x-for="option in currentQuestion?.options" :key="option">
+                                    <button @click="answerQuestion(option)"
+                                            class="w-full bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg transition-colors text-left">
+                                        <span x-text="option"></span>
+                                    </button>
+                                </template>
+                            </div>
+
+                            <!-- Text Type -->
+                            <div x-show="currentQuestion?.type === 'text'">
+                                <input type="text" x-model="textInput"
+                                       class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-gray-100 focus:outline-none focus:border-blue-500"
+                                       placeholder="输入您的回答">
+                                <button @click="answerQuestion(textInput)"
+                                        class="mt-2 w-full bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors">
+                                    提交
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Approved State -->
+                        <div x-show="dialogState === 'approved'" class="text-center">
+                            <div class="text-green-400 text-xl mb-4">需求已确认!</div>
+                            <button @click="currentPage = 'architecture'"
+                                    class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg transition-colors">
+                                查看架构设计
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Architecture Page -->
+            <div x-show="currentPage === 'architecture'" x-cloak class="p-6 fade-in">
+                <h2 class="text-2xl font-bold mb-6">架构设计</h2>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <!-- Tech Stack -->
+                    <div class="bg-gray-800 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4">技术栈</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between py-2 border-b border-gray-700">
+                                <span class="text-gray-400">运行时</span>
+                                <span x-text="architecture?.tech_stack?.runtime || 'python'"></span>
+                            </div>
+                            <div class="flex justify-between py-2 border-b border-gray-700">
+                                <span class="text-gray-400">后端框架</span>
+                                <span x-text="architecture?.tech_stack?.backend || 'fastapi'"></span>
+                            </div>
+                            <div class="flex justify-between py-2 border-b border-gray-700">
+                                <span class="text-gray-400">前端框架</span>
+                                <span x-text="architecture?.tech_stack?.frontend || 'none'"></span>
+                            </div>
+                            <div class="flex justify-between py-2">
+                                <span class="text-gray-400">数据库</span>
+                                <span x-text="architecture?.tech_stack?.database || 'sqlite'"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Components -->
+                    <div class="bg-gray-800 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4">系统组件</h3>
+                        <div class="space-y-3">
+                            <template x-for="comp in architecture?.components" :key="comp.name">
+                                <div class="bg-gray-700 rounded-lg p-3">
+                                    <div class="font-medium" x-text="comp.name"></div>
+                                    <div class="text-sm text-gray-400" x-text="comp.technology"></div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- API Endpoints -->
+                    <div class="bg-gray-800 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4">API 端点</h3>
+                        <div class="space-y-2 max-h-64 overflow-y-auto">
+                            <template x-for="endpoint in architecture?.api_endpoints" :key="endpoint.path">
+                                <div class="flex items-center text-sm">
+                                    <span class="px-2 py-1 rounded text-xs font-mono mr-2"
+                                          :class="{
+                                              'bg-green-600': endpoint.method === 'GET',
+                                              'bg-blue-600': endpoint.method === 'POST',
+                                              'bg-yellow-600': endpoint.method === 'PUT',
+                                              'bg-red-600': endpoint.method === 'DELETE'
+                                          }"
+                                          x-text="endpoint.method"></span>
+                                    <span class="font-mono" x-text="endpoint.path"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Directory Structure -->
+                    <div class="bg-gray-800 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4">目录结构</h3>
+                        <div class="font-mono text-sm text-gray-300 max-h-64 overflow-y-auto">
+                            <pre x-text="formatDirectoryStructure(architecture?.directory_structure)"></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex gap-4">
+                    <button @click="startCodegen"
+                            class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg transition-colors font-medium">
+                        生成代码
+                    </button>
+                    <button @click="currentPage = 'tasks'"
+                            class="bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg transition-colors">
+                        查看任务
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tasks Page -->
+            <div x-show="currentPage === 'tasks'" x-cloak class="p-6 fade-in">
+                <h2 class="text-2xl font-bold mb-6">任务管理</h2>
+
+                <!-- Task Stats -->
+                <div class="grid grid-cols-4 gap-4 mb-6">
+                    <template x-for="(count, status) in taskStats.by_status" :key="status">
+                        <div class="bg-gray-800 rounded-lg p-4">
+                            <div class="text-gray-400 text-sm capitalize" x-text="status"></div>
+                            <div class="text-2xl font-bold mt-1" x-text="count"></div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Task List -->
+                <div class="bg-gray-800 rounded-lg p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold">任务列表</h3>
+                        <select x-model="taskFilter" class="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-gray-100">
+                            <option value="">全部</option>
+                            <option value="pending">待处理</option>
+                            <option value="in_progress">进行中</option>
+                            <option value="completed">已完成</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-3">
+                        <template x-for="task in filteredTasks" :key="task.id">
+                            <div class="bg-gray-700 rounded-lg p-4">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div>
+                                        <div class="font-medium" x-text="task.title"></div>
+                                        <div class="text-sm text-gray-400" x-text="task.description"></div>
+                                    </div>
+                                    <span class="px-2 py-1 rounded text-xs"
+                                          :class="{
+                                              'bg-yellow-600': task.status === 'pending',
+                                              'bg-blue-600': task.status === 'in_progress',
+                                              'bg-green-600': task.status === 'completed'
+                                          }"
+                                          x-text="task.status"></span>
+                                </div>
+                                <div class="flex items-center gap-4 text-sm text-gray-400">
+                                    <span x-text="'优先级: ' + task.priority"></span>
+                                    <span x-text="'类型: ' + task.task_type"></span>
+                                </div>
+                                <div x-show="task.status === 'in_progress'" class="mt-3">
+                                    <div class="flex justify-between text-sm mb-1">
+                                        <span>进度</span>
+                                        <span x-text="task.progress + '%'"></span>
+                                    </div>
+                                    <div class="w-full bg-gray-600 rounded-full h-2">
+                                        <div class="bg-blue-500 h-2 rounded-full progress-bar"
+                                             :style="'width: ' + task.progress + '%'"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Delivery Page -->
+            <div x-show="currentPage === 'delivery'" x-cloak class="p-6 fade-in">
+                <h2 class="text-2xl font-bold mb-6">交付中心</h2>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <!-- Checklist -->
+                    <div class="bg-gray-800 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4">交付清单</h3>
+                        <div class="space-y-3">
+                            <template x-for="item in deliveryChecklist" :key="item.id">
+                                <div class="flex items-center justify-between bg-gray-700 rounded-lg p-3">
+                                    <div class="flex items-center">
+                                        <input type="checkbox"
+                                               :checked="item.status === 'completed'"
+                                               class="w-4 h-4 rounded border-gray-500 bg-gray-600 text-blue-500 focus:ring-blue-500">
+                                        <span class="ml-3" x-text="item.name"></span>
+                                    </div>
+                                    <span x-show="item.required" class="text-xs text-red-400">必需</span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Delivered Projects -->
+                    <div class="bg-gray-800 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold mb-4">已交付项目</h3>
+                        <div class="space-y-3">
+                            <template x-for="project in deliveredProjects" :key="project.id">
+                                <div class="bg-gray-700 rounded-lg p-4">
+                                    <div class="font-medium" x-text="project.name"></div>
+                                    <div class="text-sm text-gray-400 mt-1" x-text="project.description"></div>
+                                    <div class="text-xs text-gray-500 mt-2" x-text="project.created_at"></div>
+                                </div>
+                            </template>
+                            <div x-show="deliveredProjects.length === 0" class="text-gray-500 text-center py-8">
+                                暂无已交付项目
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="mt-6 flex gap-4">
+                    <button @click="generateDocs"
+                            class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg transition-colors">
+                        生成文档
+                    </button>
+                    <button @click="prepareRelease"
+                            class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg transition-colors">
+                        准备发布
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div x-show="notification.show"
+         x-transition
+         class="fixed bottom-4 right-4 bg-gray-800 border rounded-lg p-4 shadow-lg"
+         :class="{
+             'border-green-500': notification.type === 'success',
+             'border-red-500': notification.type === 'error',
+             'border-blue-500': notification.type === 'info'
+         }">
+        <div class="flex items-center">
+            <span x-text="notification.message"></span>
+        </div>
+    </div>
+
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/ws.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
