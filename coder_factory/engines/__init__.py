@@ -12,12 +12,29 @@ from .interaction_manager import (
     DialogStateMachine,
 )
 from .confirmation_flow import ConfirmationFlow
+from .tech_stack_kb import (
+    TechStackKnowledgeBase,
+    ProjectCategory,
+    ScaleLevel,
+    TechOption,
+    TechStackTemplate,
+    TECH_OPTIONS,
+    TECH_STACK_TEMPLATES,
+)
+from .architecture_designer import (
+    ArchitectureDesigner,
+    ArchitectureDesign,
+    ArchitectureComponent,
+)
 
 __all__ = [
+    # Claude Client
     "ClaudeCodeClient",
     "ClaudeCodeResult",
+    # Requirement Parser
     "RequirementParser",
     "ParseResult",
+    # Interaction Manager
     "InteractionManager",
     "DialogState",
     "QuestionType",
@@ -25,5 +42,18 @@ __all__ = [
     "DialogTurn",
     "ChangeRecord",
     "DialogStateMachine",
+    # Confirmation Flow
     "ConfirmationFlow",
+    # Tech Stack KB
+    "TechStackKnowledgeBase",
+    "ProjectCategory",
+    "ScaleLevel",
+    "TechOption",
+    "TechStackTemplate",
+    "TECH_OPTIONS",
+    "TECH_STACK_TEMPLATES",
+    # Architecture Designer
+    "ArchitectureDesigner",
+    "ArchitectureDesign",
+    "ArchitectureComponent",
 ]

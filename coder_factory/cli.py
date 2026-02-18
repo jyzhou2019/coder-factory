@@ -16,6 +16,8 @@ from . import __version__
 from .core.factory import CoderFactory, ProcessResult
 from .engines.confirmation_flow import ConfirmationFlow
 from .engines.interaction_manager import QuestionType
+from .engines.architecture_designer import ArchitectureDesigner
+from .engines.tech_stack_kb import TechStackKnowledgeBase, ProjectCategory
 
 
 console = Console()
@@ -310,6 +312,152 @@ def status():
     _show_status()
 
 
+@cli.command()
+@click.argument('requirement')
+@click.option('--output', '-o', default='./workspace', help='输出目录')
+@click.option('--save-doc', '-s', is_flag=True, help='保存架构文档')
+def design(requirement, output, save_doc):
+    """设计系统架构 (技术栈推荐 + 架构设计)"""
+    console.print(f"[cyan]正在设计架构...[/]")
+
+    # 解析需求
+    from .engines.requirement_parser import RequirementParser
+    parser = RequirementParser(output)
+    parse_result = parser.parse(requirement)
+
+    if not parse_result.success:
+        console.print(f"[red]✗ 需求解析失败:[/] {parse_result.error}")
+        return
+
+    req = parse_result.requirement
+    console.print(f"[green]✓ 需求已解析:[/] {req.summary}")
+
+    # 获取技术推荐
+    designer = ArchitectureDesigner(output)
+    recommendations = designer.get_tech_recommendations(req)
+
+    # 显示推荐
+    console.print(f"\n[bold]项目类型:[/] {recommendations['category']}")
+    console.print(f"[bold]规模估算:[/] {recommendations['scale']}")
+
+    if recommendations['templates']:
+        console.print("\n[bold cyan]推荐技术栈:[/]")
+        for i, template in enumerate(recommendations['templates'][:3], 1):
+            console.print(Panel(
+                f"[bold]{template['name']}[/]\n"
+                f"{template['description']}\n\n"
+                f"[dim]运行时:[/] {template['tech_stack'].get('runtime', 'N/A')}\n"
+                f"[dim]前端:[/] {template['tech_stack'].get('frontend') or 'N/A'}\n"
+                f"[dim]后端:[/] {template['tech_stack'].get('backend') or 'N/A'}\n"
+                f"[dim]数据库:[/] {template['tech_stack'].get('database') or 'N/A'}\n"
+                f"[dim]适用场景:[/] {', '.join(template['use_cases'])}",
+                title=f"方案 {i}",
+                border_style="blue"
+            ))
+
+    # 完整架构设计
+    console.print("\n[cyan]正在生成详细架构...[/]")
+    arch_design = designer.analyze_and_design(req)
+
+    # 显示架构组件
+    if arch_design.components:
+        console.print("\n[bold cyan]架构组件:[/]")
+        for comp in arch_design.components:
+            console.print(f"  [green]•[/] [bold]{comp.name}[/] ({comp.type})")
+            console.print(f"    [dim]技术:[/] {comp.technology}")
+            if comp.connections:
+                console.print(f"    [dim]连接:[/] {', '.join(comp.connections)}")
+
+    # 显示 API 端点
+    if arch_design.api_endpoints:
+        console.print(f"\n[bold cyan]API 端点:[/] ({len(arch_design.api_endpoints)} 个)")
+        for endpoint in arch_design.api_endpoints[:5]:
+            console.print(f"  [yellow]{endpoint.get('method', 'GET')}[/] {endpoint.get('path', '/')}")
+
+    # 显示建议
+    if arch_design.recommendations:
+        console.print("\n[bold cyan]架构建议:[/]")
+        for rec in arch_design.recommendations:
+            console.print(f"  [dim]•[/] {rec}")
+
+    # 保存文档
+    if save_doc:
+        doc = designer.generate_architecture_document(arch_design)
+        doc_path = Path(output) / "ARCHITECTURE.md"
+        doc_path.parent.mkdir(parents=True, exist_ok=True)
+        doc_path.write_text(doc, encoding="utf-8")
+        console.print(f"\n[green]✓ 架构文档已保存:[/] {doc_path}")
+
+
+@cli.command()
+@click.argument('tech_names', required=False)
+def tech(tech_names):
+    """查看技术栈信息
+
+    示例:
+      coder-factory tech              # 列出所有技术
+      coder-factory tech python       # 查看 Python 信息
+      coder-factory tech python,go    # 比较多个技术
+    """
+    kb = TechStackKnowledgeBase()
+
+    if not tech_names:
+        # 显示所有技术
+        console.print("[bold cyan]可用运行时:[/]")
+        for rt in kb.get_all_runtimes():
+            opt = kb.get_option(rt)
+            if opt:
+                console.print(f"  [green]•[/] {opt.name} - 复杂度:{opt.complexity} 流行度:{opt.popularity}")
+
+        console.print("\n[bold cyan]可用后端框架:[/]")
+        for fw in kb.get_all_frameworks("backend"):
+            opt = kb.get_option(fw)
+            if opt:
+                console.print(f"  [green]•[/] {opt.name} - {', '.join(opt.best_for[:2])}")
+
+        console.print("\n[bold cyan]可用数据库:[/]")
+        for db in kb.get_all_databases():
+            opt = kb.get_option(db)
+            if opt:
+                console.print(f"  [green]•[/] {opt.name} - {', '.join(opt.best_for[:2])}")
+
+        console.print("\n[dim]使用 'coder-factory tech <名称>' 查看详情[/]")
+    else:
+        names = [n.strip().lower() for n in tech_names.split(",")]
+        if len(names) == 1:
+            # 显示单个技术详情
+            opt = kb.get_option(names[0])
+            if opt:
+                console.print(Panel(
+                    f"[bold]优点:[/]\n" + "\n".join(f"  [green]+[/] {p}" for p in opt.pros) +
+                    f"\n\n[bold]缺点:[/]\n" + "\n".join(f"  [red]-[/] {c}" for c in opt.cons) +
+                    f"\n\n[bold]适用场景:[/]\n" + "\n".join(f"  • {u}" for u in opt.best_for) +
+                    f"\n\n[bold]评分:[/] 复杂度 {opt.complexity}/5 | 流行度 {opt.popularity}/5 | 性能 {opt.performance}/5",
+                    title=opt.name,
+                    border_style="cyan"
+                ))
+            else:
+                console.print(f"[red]未找到技术: {names[0]}[/]")
+        else:
+            # 比较多个技术
+            comparison = kb.compare_techs(names)
+            if comparison:
+                table = Table(title="技术对比")
+                table.add_column("指标", style="cyan")
+                for name in comparison:
+                    table.add_column(name, style="green")
+
+                for metric in ["complexity", "popularity", "performance"]:
+                    row = [metric]
+                    for name in comparison:
+                        row.append(str(comparison[name][metric]))
+                    table.add_row(*row)
+
+                console.print(table)
+            else:
+                console.print("[red]未找到任何匹配的技术[/]")
+
+
 def _show_status():
     """显示模块状态"""
     table = Table(title="Coder-Factory 模块状态")
@@ -320,7 +468,7 @@ def _show_status():
     modules = [
         ("F001 需求解析引擎", "✓ 已实现", "使用 Claude Code 解析"),
         ("F002 交互确认系统", "✓ 已实现", "多轮对话确认"),
-        ("F003 架构设计引擎", "待开发", "技术栈匹配"),
+        ("F003 架构设计引擎", "✓ 已实现", "技术栈知识库 + 架构生成"),
         ("F004 代码生成核心", "✓ 已实现", "使用 Claude Code 生成"),
         ("F005 自动化测试系统", "✓ 已实现", "使用 Claude Code 测试"),
         ("F006 容器化部署引擎", "待开发", "Docker 部署"),

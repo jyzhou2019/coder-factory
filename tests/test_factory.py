@@ -318,3 +318,192 @@ def test_interaction_manager_nested_update():
     req = manager.get_requirement()
     assert req["tech_stack"]["runtime"] == "nodejs"
 
+
+# ===== F003 架构设计引擎测试 =====
+
+def test_tech_stack_knowledge_base():
+    """测试技术栈知识库"""
+    from coder_factory.engines.tech_stack_kb import (
+        TechStackKnowledgeBase, ProjectCategory, ScaleLevel
+    )
+
+    kb = TechStackKnowledgeBase()
+
+    # 测试获取技术选项
+    python_opt = kb.get_option("python")
+    assert python_opt is not None
+    assert python_opt.name == "Python"
+
+    # 测试按类型获取模板
+    web_templates = kb.get_templates_by_category(ProjectCategory.WEB_APP)
+    assert len(web_templates) > 0
+
+    # 测试推荐
+    recommendations = kb.recommend_for_project(ProjectCategory.API_SERVICE)
+    assert len(recommendations) > 0
+
+
+def test_tech_option():
+    """测试技术选项"""
+    from coder_factory.engines.tech_stack_kb import TechOption
+
+    opt = TechOption(
+        name="TestTech",
+        category="runtime",
+        pros=["fast", "simple"],
+        cons=["new"],
+        best_for=["api", "microservice"],
+        complexity=2,
+        popularity=4,
+        performance=4,
+    )
+
+    assert opt.name == "TestTech"
+    assert len(opt.pros) == 2
+    assert opt.complexity == 2
+
+
+def test_tech_comparison():
+    """测试技术比较"""
+    from coder_factory.engines.tech_stack_kb import TechStackKnowledgeBase
+
+    kb = TechStackKnowledgeBase()
+    comparison = kb.compare_techs(["python", "nodejs"])
+
+    assert "python" in comparison
+    assert "nodejs" in comparison
+    assert comparison["python"]["complexity"] == 1
+    assert comparison["nodejs"]["complexity"] == 2
+
+
+def test_architecture_designer_init():
+    """测试架构设计器初始化"""
+    from coder_factory.engines.architecture_designer import ArchitectureDesigner
+
+    designer = ArchitectureDesigner(workspace="./test_workspace")
+    assert designer.kb is not None
+    assert designer.claude is not None
+
+
+def test_architecture_component():
+    """测试架构组件"""
+    from coder_factory.engines.architecture_designer import ArchitectureComponent
+
+    comp = ArchitectureComponent(
+        name="API Server",
+        type="backend",
+        technology="FastAPI",
+        description="Main API service",
+        connections=["Database"],
+    )
+
+    assert comp.name == "API Server"
+    assert comp.technology == "FastAPI"
+    assert "Database" in comp.connections
+
+    # 测试序列化
+    data = comp.to_dict()
+    assert data["name"] == "API Server"
+    assert data["type"] == "backend"
+
+
+def test_architecture_design():
+    """测试架构设计结果"""
+    from coder_factory.engines.architecture_designer import (
+        ArchitectureDesign, ArchitectureComponent
+    )
+
+    design = ArchitectureDesign(
+        project_name="test_project",
+        description="Test project description",
+        components=[
+            ArchitectureComponent(name="API", type="backend", technology="FastAPI")
+        ],
+        tech_stack={"runtime": "python", "backend": "fastapi"},
+        directory_structure={"src": {}, "tests": {}},
+    )
+
+    assert design.project_name == "test_project"
+    assert len(design.components) == 1
+
+    # 测试序列化
+    data = design.to_dict()
+    assert data["project_name"] == "test_project"
+    assert "created_at" in data
+
+
+def test_determine_category():
+    """测试项目类型判断"""
+    from coder_factory.engines.architecture_designer import ArchitectureDesigner
+    from coder_factory.models.requirement import Requirement
+
+    designer = ArchitectureDesigner()
+
+    # 测试不同项目类型
+    req_api = Requirement(project_type="api", summary="API service")
+    category = designer._determine_category(req_api)
+    assert category.value == "api_service"
+
+    req_cli = Requirement(project_type="cli", summary="CLI tool")
+    category = designer._determine_category(req_cli)
+    assert category.value == "cli_tool"
+
+
+def test_estimate_scale():
+    """测试规模估算"""
+    from coder_factory.engines.architecture_designer import ArchitectureDesigner
+    from coder_factory.models.requirement import Requirement, TaskNode
+
+    designer = ArchitectureDesigner()
+
+    # 小项目
+    req_small = Requirement(summary="Small project")
+    scale = designer._estimate_scale(req_small)
+    assert scale.value == "small"
+
+    # 大项目 (带任务树)
+    req_large = Requirement(
+        summary="Large project",
+        task_tree=TaskNode(
+            title="Root",
+            subtasks=[
+                TaskNode(title=f"Task {i}", estimated_complexity=3)
+                for i in range(15)
+            ]
+        )
+    )
+    scale = designer._estimate_scale(req_large)
+    assert scale.value in ["medium", "large"]
+
+
+def test_generate_architecture_document():
+    """测试架构文档生成"""
+    from coder_factory.engines.architecture_designer import (
+        ArchitectureDesigner, ArchitectureDesign, ArchitectureComponent
+    )
+
+    designer = ArchitectureDesigner()
+
+    design = ArchitectureDesign(
+        project_name="my_api",
+        description="My API project",
+        components=[
+            ArchitectureComponent(
+                name="API",
+                type="backend",
+                technology="FastAPI",
+                description="REST API"
+            )
+        ],
+        tech_stack={"runtime": "python"},
+        directory_structure={"src": {}, "tests": {}},
+        recommendations=["Use caching"],
+    )
+
+    doc = designer.generate_architecture_document(design)
+
+    assert "# my_api" in doc
+    assert "My API project" in doc
+    assert "FastAPI" in doc
+    assert "Use caching" in doc
+
