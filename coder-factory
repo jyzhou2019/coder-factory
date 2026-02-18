@@ -1,0 +1,9 @@
+#!/bin/bash
+# Coder-Factory Runner
+# Usage: ./coder-factory <command> [args]
+
+# Use MSYS_NO_PATHCONV to prevent path conversion
+MSYS_NO_PATHCONV=1 docker run --rm \
+    -v "/d/ai-program/coder-factory:/workspace" \
+    -w /workspace \
+    coder-factory:latest "$@"
