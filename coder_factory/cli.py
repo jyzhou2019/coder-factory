@@ -5,6 +5,7 @@ Coder-Factory CLI 入口
 """
 
 import click
+from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -19,6 +20,7 @@ from .engines.interaction_manager import QuestionType
 from .engines.architecture_designer import ArchitectureDesigner
 from .engines.tech_stack_kb import TechStackKnowledgeBase, ProjectCategory
 from .engines.deployment_engine import DeploymentEngine
+from .engines.delivery_pipeline import DeliveryPipeline, CheckStatus
 
 
 console = Console()
@@ -571,6 +573,117 @@ def docker(project_path, build, up, down, logs):
 
     else:
         console.print("[yellow]请指定操作: --build, --up, --down, --logs[/]")
+
+
+@cli.command()
+@click.argument('project_path', default='.')
+@click.option('--checklist', is_flag=True, help='生成交付检查清单')
+@click.option('--docs', is_flag=True, help='生成项目文档')
+@click.option('--release', is_flag=True, help='准备版本发布')
+@click.option('--bump', type=click.Choice(['major', 'minor', 'patch']), default='patch', help='版本递增类型')
+@click.option('--output', '-o', default=None, help='输出目录')
+def deliver(project_path, checklist, docs, release, bump, output):
+    """交付流水线操作
+
+    示例:
+      coder-factory deliver --checklist     # 生成检查清单
+      coder-factory deliver --docs          # 生成文档
+      coder-factory deliver --release       # 准备发布
+      coder-factory deliver --release --bump minor  # 小版本发布
+    """
+    pipeline = DeliveryPipeline(project_path)
+    project_name = Path(project_path).name or "project"
+    output_dir = Path(output) if output else Path(project_path)
+
+    if checklist:
+        console.print("[cyan]生成交付检查清单...[/]")
+        cl = pipeline.create_checklist(project_name)
+
+        table = Table(title=f"交付检查清单 - {project_name} v{cl.version}")
+        table.add_column("ID", style="dim")
+        table.add_column("检查项", style="cyan")
+        table.add_column("类别", style="yellow")
+        table.add_column("状态", style="green")
+        table.add_column("必需", style="dim")
+
+        for check in cl.checks:
+            status_style = {
+                CheckStatus.PASSED: "[green]✓[/]",
+                CheckStatus.FAILED: "[red]✗[/]",
+                CheckStatus.SKIPPED: "[dim]-[/]",
+                CheckStatus.PENDING: "[yellow]?[/]",
+            }.get(check.status, "?")
+
+            table.add_row(
+                check.id,
+                check.name,
+                check.category.value,
+                status_style,
+                "是" if check.required else "否"
+            )
+
+        console.print(table)
+        console.print(f"\n[bold]总计:[/] {len(cl.checks)} 项")
+        console.print(f"[green]通过:[/] {cl.passed_count}  [red]失败:[/] {cl.failed_count}")
+        console.print(f"[bold]交付就绪:[/] {'[green]是[/]' if cl.is_ready else '[red]否[/]'}")
+
+    elif docs:
+        console.print("[cyan]生成项目文档...[/]")
+
+        # 获取技术栈信息
+        tech_stack = {"runtime": "python"}  # 默认值
+        description = f"{project_name} 项目"
+
+        # 生成文档
+        generated_docs = pipeline.generate_all_docs(
+            project_name=project_name,
+            description=description,
+            tech_stack=tech_stack,
+        )
+
+        # 写入文件
+        written = pipeline.write_docs(generated_docs, output_dir)
+
+        console.print(f"[green]✓ 已生成 {len(written)} 个文档文件:[/]")
+        for f in written:
+            console.print(f"  [dim]•[/] {f.name}")
+
+    elif release:
+        console.print("[cyan]准备版本发布...[/]")
+
+        release_info = pipeline.prepare_release(bump_type=bump)
+
+        console.print(f"\n[bold]版本变更:[/]")
+        console.print(f"  当前版本: [yellow]{release_info['current_version']}[/]")
+        console.print(f"  新版本: [green]{release_info['new_version']}[/]")
+
+        console.print(f"\n[bold]发布说明:[/]")
+        console.print(Panel(release_info['release_notes_md'], border_style="green"))
+
+        console.print(f"\n[bold]下一步:[/]")
+        console.print("  1. 更新版本号到配置文件")
+        console.print("  2. 更新 CHANGELOG.md")
+        console.print(f"  3. git tag v{release_info['new_version']}")
+        console.print("  4. git push --tags")
+
+    else:
+        # 显示交付摘要
+        summary = pipeline.get_delivery_summary(project_name)
+        console.print(Panel(
+            f"[bold]项目:[/] {summary['project_name']}\n"
+            f"[bold]版本:[/] {summary['current_version']}\n"
+            f"[bold]检查项:[/] {summary['checklist_summary']['total']} 项\n"
+            f"[bold]文档:[/] {', '.join(summary['generated_docs'])}\n",
+            title="交付摘要",
+            border_style="cyan"
+        ))
+        console.print("\n[bold]可用操作:[/]")
+        console.print("  --checklist  生成交付检查清单")
+        console.print("  --docs       生成项目文档")
+        console.print("  --release    准备版本发布")
+
+
+def _show_status():
     """显示模块状态"""
     table = Table(title="Coder-Factory 模块状态")
     table.add_column("模块", style="cyan")
@@ -584,7 +697,7 @@ def docker(project_path, build, up, down, logs):
         ("F004 代码生成核心", "✓ 已实现", "使用 Claude Code 生成"),
         ("F005 自动化测试系统", "✓ 已实现", "使用 Claude Code 测试"),
         ("F006 容器化部署引擎", "✓ 已实现", "Dockerfile + Compose 自动生成"),
-        ("F007 交付流水线", "待开发", "完整交付链"),
+        ("F007 交付流水线", "✓ 已实现", "检查清单 + 文档 + 发布"),
     ]
 
     for name, status, desc in modules:

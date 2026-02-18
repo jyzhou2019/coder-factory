@@ -672,3 +672,170 @@ def test_docker_templates():
     assert "python" in fastapi_template.base_image
     assert 8000 in fastapi_template.expose_ports
 
+
+# ===== F007 交付流水线测试 =====
+
+def test_check_item():
+    """测试检查项"""
+    from coder_factory.engines.delivery_pipeline import CheckItem, CheckCategory, CheckStatus
+
+    item = CheckItem(
+        id="TEST-01",
+        name="单元测试",
+        category=CheckCategory.TESTS,
+        description="测试是否通过",
+        required=True,
+    )
+
+    assert item.id == "TEST-01"
+    assert item.status == CheckStatus.PENDING
+
+    # 测试序列化
+    data = item.to_dict()
+    assert data["id"] == "TEST-01"
+    assert data["category"] == "tests"
+
+
+def test_delivery_checklist():
+    """测试交付检查清单"""
+    from coder_factory.engines.delivery_pipeline import (
+        DeliveryChecklist, CheckItem, CheckCategory, CheckStatus
+    )
+
+    checklist = DeliveryChecklist(
+        project_name="test_project",
+        version="1.0.0",
+        checks=[
+            CheckItem(id="C1", name="Check 1", category=CheckCategory.CODE,
+                     status=CheckStatus.PASSED, required=True),
+            CheckItem(id="C2", name="Check 2", category=CheckCategory.TESTS,
+                     status=CheckStatus.FAILED, required=False),
+        ]
+    )
+
+    assert checklist.passed_count == 1
+    assert checklist.failed_count == 1
+    assert checklist.is_ready == True  # 因为失败的检查项不是必需的
+
+
+def test_checklist_generator():
+    """测试检查清单生成器"""
+    from coder_factory.engines.delivery_pipeline import ChecklistGenerator
+
+    gen = ChecklistGenerator()
+    checklist = gen.generate("my_project", "1.0.0")
+
+    assert checklist.project_name == "my_project"
+    assert checklist.version == "1.0.0"
+    assert len(checklist.checks) > 0
+
+
+def test_document_generator_readme():
+    """测试 README 生成"""
+    from coder_factory.engines.delivery_pipeline import DocumentGenerator
+
+    gen = DocumentGenerator()
+    readme = gen.generate_readme(
+        project_name="test_api",
+        description="A test API project",
+        tech_stack={"runtime": "python", "backend": "fastapi"},
+        features=["用户认证", "数据管理"],
+    )
+
+    assert "# test_api" in readme
+    assert "A test API project" in readme
+    assert "fastapi" in readme.lower()
+    assert "用户认证" in readme
+
+
+def test_document_generator_changelog():
+    """测试 CHANGELOG 生成"""
+    from coder_factory.engines.delivery_pipeline import DocumentGenerator, ReleaseNote
+
+    gen = DocumentGenerator()
+    changelog = gen.generate_changelog(
+        "my_project",
+        releases=[
+            ReleaseNote(
+                version="1.0.0",
+                date=datetime.now(),
+                features=["Initial release"],
+            )
+        ]
+    )
+
+    assert "# Changelog" in changelog
+    assert "1.0.0" in changelog
+    assert "Initial release" in changelog
+
+
+def test_release_manager_version():
+    """测试版本管理"""
+    from coder_factory.engines.delivery_pipeline import ReleaseManager
+
+    mgr = ReleaseManager()
+
+    # 测试版本递增
+    assert mgr.bump_version("1.0.0", "patch") == "1.0.1"
+    assert mgr.bump_version("1.0.0", "minor") == "1.1.0"
+    assert mgr.bump_version("1.0.0", "major") == "2.0.0"
+
+
+def test_release_note():
+    """测试发布说明"""
+    from coder_factory.engines.delivery_pipeline import ReleaseNote
+
+    note = ReleaseNote(
+        version="1.0.0",
+        date=datetime.now(),
+        features=["新功能 A", "新功能 B"],
+        fixes=["修复问题 X"],
+    )
+
+    assert note.version == "1.0.0"
+    assert len(note.features) == 2
+    assert len(note.fixes) == 1
+
+    data = note.to_dict()
+    assert data["version"] == "1.0.0"
+
+
+def test_delivery_pipeline_init():
+    """测试交付流水线初始化"""
+    from coder_factory.engines.delivery_pipeline import DeliveryPipeline
+
+    pipeline = DeliveryPipeline()
+    assert pipeline.checklist_gen is not None
+    assert pipeline.doc_gen is not None
+    assert pipeline.release_mgr is not None
+
+
+def test_delivery_pipeline_summary():
+    """测试交付摘要"""
+    from coder_factory.engines.delivery_pipeline import DeliveryPipeline
+
+    pipeline = DeliveryPipeline()
+    summary = pipeline.get_delivery_summary("my_project")
+
+    assert summary["project_name"] == "my_project"
+    assert "current_version" in summary
+    assert "checklist_summary" in summary
+    assert len(summary["generated_docs"]) > 0
+
+
+def test_prepare_release():
+    """测试准备发布"""
+    from coder_factory.engines.delivery_pipeline import DeliveryPipeline
+
+    pipeline = DeliveryPipeline()
+    release_info = pipeline.prepare_release(
+        bump_type="patch",
+        features=["新功能"],
+        fixes=["修复"],
+    )
+
+    assert "current_version" in release_info
+    assert "new_version" in release_info
+    assert "release_note" in release_info
+    assert "release_notes_md" in release_info
+

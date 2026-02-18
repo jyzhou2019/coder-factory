@@ -77,7 +77,7 @@
         "生成用户文档",
         "实现版本发布管理"
       ],
-      "status": "pending",
+      "status": "passed",
       "priority": "P1"
     }
   ],
