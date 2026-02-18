@@ -504,10 +504,13 @@ class ReleaseManager:
         # 尝试从 pyproject.toml 读取
         pyproject = self.project_path / "pyproject.toml"
         if pyproject.exists():
-            content = pyproject.read_text()
-            match = re.search(r'version\s*=\s*["\']([^"\']+)["\']', content)
-            if match:
-                return match.group(1)
+            try:
+                content = pyproject.read_text(encoding="utf-8")
+                match = re.search(r'version\s*=\s*["\']([^"\']+)["\']', content)
+                if match:
+                    return match.group(1)
+            except:
+                pass
 
         return "0.1.0"
 
